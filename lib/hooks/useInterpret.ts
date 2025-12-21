@@ -18,6 +18,108 @@ import type {
   Tag,
 } from '@/types';
 
+// Subscriber model is forced to GPT-4o Mini
+const SUBSCRIBER_MODEL = 'gpt-4o-mini';
+
+// Helper to clean content from special tags
+function cleanContent(content: string): string {
+  return content
+    .replace(/\[FOLLOW_UP\].*?\[\/FOLLOW_UP\]/gs, '')
+    .replace(/\[SYMBOL\](.*?)\[\/SYMBOL\]/gs, '$1')
+    .trim();
+}
+
+function extractSuggestedFollowUps(content: string): string[] {
+  const regex = /\[FOLLOW_UP\](.*?)\[\/FOLLOW_UP\]/gs;
+  const matches = [...content.matchAll(regex)];
+  return matches.map((m) => m[1].trim()).slice(0, 3);
+}
+
+function extractSymbols(content: string): string[] {
+  const regex = /\[SYMBOL\](.*?)\[\/SYMBOL\]/gs;
+  const matches = [...content.matchAll(regex)];
+  return [...new Set(matches.map((m) => m[1].trim().toLowerCase()))];
+}
+
+// Helper function to interpret via the subscription proxy
+interface ProxyInterpretOptions {
+  dreamContent: string;
+  dreamTitle?: string;
+  tags: Tag[];
+  framework: FrameworkId;
+  sessionToken: string;
+  conversationHistory?: ConversationMessage[];
+  onChunk: (chunk: string) => void;
+}
+
+async function interpretViaProxy(
+  options: ProxyInterpretOptions
+): Promise<InterpretationResponse> {
+  const response = await fetch('/api/interpret', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${options.sessionToken}`,
+    },
+    body: JSON.stringify({
+      dreamContent: options.dreamContent,
+      dreamTitle: options.dreamTitle,
+      tags: options.tags,
+      framework: options.framework,
+      conversationHistory: options.conversationHistory,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to interpret dream');
+  }
+
+  // Handle SSE stream
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('No response body');
+  }
+
+  const decoder = new TextDecoder();
+  let fullContent = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n');
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.content) {
+            fullContent += data.content;
+            options.onChunk(data.content);
+          }
+          if (data.error) {
+            throw new Error(data.error);
+          }
+        } catch {
+          // Ignore parse errors for incomplete chunks
+        }
+      }
+    }
+  }
+
+  const cleanedContent = cleanContent(fullContent);
+
+  return {
+    content: cleanedContent,
+    tokenCount: { input: 0, output: 0 }, // Proxy doesn't return token counts
+    costUsd: 0, // Subscription covers cost
+    suggestedFollowUps: extractSuggestedFollowUps(fullContent),
+    identifiedSymbols: extractSymbols(fullContent),
+  };
+}
+
 interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -36,7 +138,15 @@ export function useInterpret({
   dreamTitle,
   tags,
 }: UseInterpretOptions) {
-  const { openaiApiKey, defaultModel, defaultFramework } = useSettingsStore();
+  const {
+    openaiApiKey,
+    defaultModel,
+    defaultFramework,
+    subscriptionSessionToken,
+    isSubscribed,
+  } = useSettingsStore();
+
+  const hasActiveSubscription = isSubscribed();
 
   const [isInterpreting, setIsInterpreting] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -57,8 +167,9 @@ export function useInterpret({
       framework: FrameworkId = defaultFramework,
       model: string = defaultModel
     ): Promise<InterpretationResponse | null> => {
-      if (!openaiApiKey) {
-        setError('Please set your OpenAI API key in Settings');
+      // Check if user has subscription or API key
+      if (!hasActiveSubscription && !openaiApiKey) {
+        setError('Please set your OpenAI API key in Settings or subscribe to DreamLens Pro');
         return null;
       }
 
@@ -66,30 +177,47 @@ export function useInterpret({
       setStreamingContent('');
       setError(null);
 
+      // Force model to GPT-4o Mini for subscribers
+      const effectiveModel = hasActiveSubscription ? SUBSCRIBER_MODEL : model;
+
       try {
-        const client = createLLMClient('openai', openaiApiKey);
-
-        const request: InterpretationRequest = {
-          dreamContent,
-          dreamTitle,
-          tags,
-          framework,
-          provider: 'openai',
-          model,
-        };
-
-        // Use streaming
-        const generator = client.interpretStream(request);
         let result: InterpretationResponse | undefined;
 
-        // Collect streamed content
-        while (true) {
-          const { value, done } = await generator.next();
-          if (done) {
-            result = value as InterpretationResponse;
-            break;
+        if (hasActiveSubscription && subscriptionSessionToken) {
+          // Use the subscription proxy endpoint
+          result = await interpretViaProxy({
+            dreamContent,
+            dreamTitle,
+            tags,
+            framework,
+            sessionToken: subscriptionSessionToken,
+            onChunk: (chunk) => setStreamingContent((prev) => prev + chunk),
+          });
+        } else {
+          // Use direct API call with user's key
+          const client = createLLMClient('openai', openaiApiKey!);
+
+          const request: InterpretationRequest = {
+            dreamContent,
+            dreamTitle,
+            tags,
+            framework,
+            provider: 'openai',
+            model: effectiveModel,
+          };
+
+          // Use streaming
+          const generator = client.interpretStream(request);
+
+          // Collect streamed content
+          while (true) {
+            const { value, done } = await generator.next();
+            if (done) {
+              result = value as InterpretationResponse;
+              break;
+            }
+            setStreamingContent((prev) => prev + value);
           }
-          setStreamingContent((prev) => prev + value);
         }
 
         if (result) {
@@ -98,7 +226,7 @@ export function useInterpret({
             dreamLocalId,
             framework,
             provider: 'openai',
-            model,
+            model: effectiveModel,
             content: result.content,
             tokenCount: result.tokenCount.input + result.tokenCount.output,
             costUsd: result.costUsd,
@@ -135,6 +263,8 @@ export function useInterpret({
       dreamLocalId,
       defaultFramework,
       defaultModel,
+      hasActiveSubscription,
+      subscriptionSessionToken,
     ]
   );
 
@@ -146,8 +276,9 @@ export function useInterpret({
       currentInterpretationContent?: string,
       interpretationLocalId?: string
     ): Promise<string | null> => {
-      if (!openaiApiKey) {
-        setError('Please set your OpenAI API key in Settings');
+      // Check if user has subscription or API key
+      if (!hasActiveSubscription && !openaiApiKey) {
+        setError('Please set your OpenAI API key in Settings or subscribe to DreamLens Pro');
         return null;
       }
 
@@ -156,8 +287,6 @@ export function useInterpret({
       setError(null);
 
       try {
-        const client = createLLMClient('openai', openaiApiKey);
-
         // Use existing conversation history, or initialize from current interpretation
         let baseHistory = conversationHistory;
         let activeConversationId = conversationLocalId;
@@ -184,27 +313,44 @@ export function useInterpret({
           { role: 'user', content: message },
         ];
 
-        const request: InterpretationRequest = {
-          dreamContent,
-          dreamTitle,
-          tags,
-          framework,
-          provider: 'openai',
-          model,
-          conversationHistory: updatedHistory,
-        };
-
-        // Use streaming
-        const generator = client.interpretStream(request);
         let result: InterpretationResponse | undefined;
 
-        while (true) {
-          const { value, done } = await generator.next();
-          if (done) {
-            result = value as InterpretationResponse;
-            break;
+        if (hasActiveSubscription && subscriptionSessionToken) {
+          // Use the subscription proxy endpoint
+          result = await interpretViaProxy({
+            dreamContent,
+            dreamTitle,
+            tags,
+            framework,
+            sessionToken: subscriptionSessionToken,
+            conversationHistory: updatedHistory,
+            onChunk: (chunk) => setStreamingContent((prev) => prev + chunk),
+          });
+        } else {
+          // Use direct API call with user's key
+          const client = createLLMClient('openai', openaiApiKey!);
+
+          const request: InterpretationRequest = {
+            dreamContent,
+            dreamTitle,
+            tags,
+            framework,
+            provider: 'openai',
+            model,
+            conversationHistory: updatedHistory,
+          };
+
+          // Use streaming
+          const generator = client.interpretStream(request);
+
+          while (true) {
+            const { value, done } = await generator.next();
+            if (done) {
+              result = value as InterpretationResponse;
+              break;
+            }
+            setStreamingContent((prev) => prev + value);
           }
-          setStreamingContent((prev) => prev + value);
         }
 
         if (result) {
@@ -245,6 +391,8 @@ export function useInterpret({
       conversationLocalId,
       defaultFramework,
       defaultModel,
+      hasActiveSubscription,
+      subscriptionSessionToken,
     ]
   );
 
@@ -295,6 +443,8 @@ export function useInterpret({
     streamingContent,
     error,
     hasApiKey: !!openaiApiKey,
+    hasActiveSubscription,
+    effectiveModel: hasActiveSubscription ? SUBSCRIBER_MODEL : defaultModel,
     conversationHistory,
     followUpResponse,
     suggestedFollowUps,

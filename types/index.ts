@@ -230,6 +230,11 @@ export interface Settings {
   defaultProvider: ProviderId;
   defaultModel: string;
   openaiApiKey?: string;
+  // Subscription-related settings
+  subscriptionEmail?: string;
+  subscriptionStatus?: SubscriptionStatus;
+  subscriptionSessionToken?: string;
+  subscriptionCurrentPeriodEnd?: string; // ISO date string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -282,6 +287,40 @@ export interface LocalSymbol {
   valence?: 'positive' | 'negative' | 'neutral' | 'ambivalent';
   relatedSymbolIds: string[];
   frequency: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// === SUBSCRIPTION TYPES ===
+export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'none';
+
+export interface Subscription {
+  id: string; // Stripe subscription ID
+  status: SubscriptionStatus;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface SubscriberInfo {
+  email: string;
+  customerId: string; // Stripe customer ID
+  subscription?: Subscription;
+  dedicatedApiKeyId?: string; // OpenAI project API key ID (not the key itself)
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Local storage for subscription state
+export interface LocalSubscription {
+  localId: string;
+  email: string;
+  customerId: string;
+  subscriptionId?: string;
+  status: SubscriptionStatus;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd: boolean;
+  sessionToken?: string; // For authenticating with backend
   createdAt: Date;
   updatedAt: Date;
 }

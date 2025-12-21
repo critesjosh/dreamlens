@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Select } from '@/components/ui/Select';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { FRAMEWORKS, MODELS, type FrameworkId, type ThemeMode } from '@/types';
 
 export default function SettingsPage() {
@@ -24,7 +25,10 @@ export default function SettingsPage() {
     setDefaultFramework,
     setDefaultModel,
     setOpenAIApiKey,
+    isSubscribed,
   } = useSettingsStore();
+
+  const hasActiveSubscription = isSubscribed();
 
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(openaiApiKey || '');
@@ -60,56 +64,61 @@ export default function SettingsPage() {
         </p>
       </header>
 
-      {/* API Key */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">OpenAI API Key</CardTitle>
-          <CardDescription>
-            Required for dream interpretation. Your key is stored locally.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="sk-..."
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showApiKey ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
+      {/* Subscription */}
+      <SubscriptionCard />
+
+      {/* API Key - only show if not subscribed */}
+      {!hasActiveSubscription && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">OpenAI API Key</CardTitle>
+            <CardDescription>
+              Use your own API key for dream interpretation, or subscribe above.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="sk-..."
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <Button onClick={handleSaveApiKey}>Save</Button>
             </div>
-            <Button onClick={handleSaveApiKey}>Save</Button>
-          </div>
-          {openaiApiKey && (
+            {openaiApiKey && (
+              <p className="text-xs text-muted-foreground">
+                API key saved and ready to use
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              API key saved and ready to use
+              Get your API key from{' '}
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                OpenAI Platform
+              </a>
             </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Get your API key from{' '}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              OpenAI Platform
-            </a>
-          </p>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Theme */}
       <Card>

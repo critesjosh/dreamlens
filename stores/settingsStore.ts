@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Settings, DEFAULT_SETTINGS, ThemeMode, FrameworkId, ProviderId } from '@/types';
+import { Settings, DEFAULT_SETTINGS, ThemeMode, FrameworkId, ProviderId, SubscriptionStatus } from '@/types';
 
 interface SettingsStore extends Settings {
   setTheme: (theme: ThemeMode) => void;
@@ -13,6 +13,15 @@ interface SettingsStore extends Settings {
   setNightModeTime: (start: string, end: string) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   checkAutoNightMode: () => void;
+  // Subscription methods
+  setSubscription: (data: {
+    email: string;
+    status: SubscriptionStatus;
+    sessionToken: string;
+    currentPeriodEnd?: string;
+  }) => void;
+  clearSubscription: () => void;
+  isSubscribed: () => boolean;
 }
 
 function applyTheme(theme: ThemeMode) {
@@ -93,6 +102,32 @@ export const useSettingsStore = create<SettingsStore>()(
           set({ theme: targetTheme });
           applyTheme(targetTheme);
         }
+      },
+
+      setSubscription: (data) => {
+        set({
+          subscriptionEmail: data.email,
+          subscriptionStatus: data.status,
+          subscriptionSessionToken: data.sessionToken,
+          subscriptionCurrentPeriodEnd: data.currentPeriodEnd,
+        });
+      },
+
+      clearSubscription: () => {
+        set({
+          subscriptionEmail: undefined,
+          subscriptionStatus: undefined,
+          subscriptionSessionToken: undefined,
+          subscriptionCurrentPeriodEnd: undefined,
+        });
+      },
+
+      isSubscribed: () => {
+        const { subscriptionStatus, subscriptionCurrentPeriodEnd } = get();
+        if (subscriptionStatus !== 'active') return false;
+        if (!subscriptionCurrentPeriodEnd) return false;
+        // Check if subscription is still valid
+        return new Date(subscriptionCurrentPeriodEnd) > new Date();
       },
     }),
     {

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Tag, FrameworkId, ProviderId } from '@/types';
+import type { Tag, FrameworkId, ProviderId, SubscriptionStatus } from '@/types';
 
 // === Database Types ===
 
@@ -49,6 +49,19 @@ export interface LocalSymbol {
   updatedAt: Date;
 }
 
+export interface LocalSubscription {
+  localId: string;
+  email: string;
+  customerId: string; // Stripe customer ID
+  subscriptionId?: string;
+  status: SubscriptionStatus;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd: boolean;
+  sessionToken?: string; // For authenticating with backend
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // === Database Class ===
 
 class DreamLensDB extends Dexie {
@@ -56,6 +69,7 @@ class DreamLensDB extends Dexie {
   interpretations!: Table<LocalInterpretation, string>;
   conversations!: Table<LocalConversation, string>;
   symbols!: Table<LocalSymbol, string>;
+  subscriptions!: Table<LocalSubscription, string>;
 
   constructor() {
     super('dreamlens');
@@ -66,6 +80,15 @@ class DreamLensDB extends Dexie {
       interpretations: 'localId, dreamLocalId, framework, createdAt',
       conversations: 'localId, interpretationLocalId, updatedAt',
       symbols: 'localId, name, frequency, updatedAt',
+    });
+
+    // Version 2: Add subscriptions table
+    this.version(2).stores({
+      dreams: 'localId, recordedAt, createdAt, updatedAt, *tags.value',
+      interpretations: 'localId, dreamLocalId, framework, createdAt',
+      conversations: 'localId, interpretationLocalId, updatedAt',
+      symbols: 'localId, name, frequency, updatedAt',
+      subscriptions: 'localId, email, customerId, status, updatedAt',
     });
   }
 }
@@ -243,4 +266,58 @@ export async function incrementSymbolFrequency(localId: string): Promise<void> {
 
 export async function deleteSymbol(localId: string): Promise<void> {
   await localDb.symbols.delete(localId);
+}
+
+// === Subscription Operations ===
+
+export async function getSubscription(): Promise<LocalSubscription | undefined> {
+  // Get the first (and should be only) subscription record
+  return localDb.subscriptions.orderBy('updatedAt').last();
+}
+
+export async function saveSubscription(
+  data: Omit<LocalSubscription, 'localId' | 'createdAt' | 'updatedAt'>
+): Promise<LocalSubscription> {
+  const now = new Date();
+
+  // Check if we already have a subscription record
+  const existing = await getSubscription();
+
+  if (existing) {
+    // Update existing record
+    await localDb.subscriptions.update(existing.localId, {
+      ...data,
+      updatedAt: now,
+    });
+    return { ...existing, ...data, updatedAt: now };
+  }
+
+  // Create new subscription record
+  const subscription: LocalSubscription = {
+    ...data,
+    localId: generateLocalId(),
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await localDb.subscriptions.add(subscription);
+  return subscription;
+}
+
+export async function updateSubscriptionStatus(
+  status: 'active' | 'canceled' | 'past_due' | 'none',
+  currentPeriodEnd?: Date
+): Promise<void> {
+  const subscription = await getSubscription();
+  if (subscription) {
+    await localDb.subscriptions.update(subscription.localId, {
+      status,
+      currentPeriodEnd,
+      updatedAt: new Date(),
+    });
+  }
+}
+
+export async function clearSubscription(): Promise<void> {
+  await localDb.subscriptions.clear();
 }
