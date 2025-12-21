@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Moon, Sun, Sparkles, Github } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun, Sparkles, Github, Download } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Select } from '@/components/ui/Select';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { FRAMEWORKS, MODELS, type FrameworkId, type ThemeMode } from '@/types';
+import { exportAndDownload } from '@/lib/utils/export';
 
 export default function SettingsPage() {
   const {
@@ -28,9 +29,22 @@ export default function SettingsPage() {
 
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(openaiApiKey || '');
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleSaveApiKey = () => {
     setOpenAIApiKey(apiKeyInput);
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      await exportAndDownload();
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const themeOptions = [
@@ -208,6 +222,38 @@ export default function SettingsPage() {
               options={modelOptions}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Export */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Data Export
+          </CardTitle>
+          <CardDescription>
+            Download all your dreams, interpretations, and conversations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Export your complete DreamLens data as a JSON file. This includes all
+            dreams, interpretations, conversations, and symbols stored locally on
+            this device.
+          </p>
+          <Button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="w-full sm:w-auto"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {isExporting ? 'Exporting...' : 'Export All Data'}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            The exported file can be used for backup or importing into another
+            device (import functionality coming soon).
+          </p>
         </CardContent>
       </Card>
 
