@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Mic, BookOpen, Sparkles, ChevronRight, Moon } from 'lucide-react';
+import { Mic, BookOpen, Sparkles, ChevronRight, Moon, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -20,12 +20,31 @@ export default function HomePage() {
   return (
     <div className="min-h-screen pb-20">
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-primary/10 to-background px-4 py-12 text-center">
-        <Moon className="h-16 w-16 mx-auto mb-4 text-primary" />
-        <h1 className="text-3xl font-bold mb-2">DreamLens</h1>
-        <p className="text-muted-foreground max-w-sm mx-auto">
-          AI-powered dream journal with multiple psychological interpretation frameworks
-        </p>
+      <div className="relative overflow-hidden bg-gradient-to-b from-primary/20 via-primary/10 to-background px-4 py-16 text-center">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute -top-12 -right-12 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Animated moon icon with glow */}
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+            <div className="relative bg-gradient-to-br from-primary/20 to-primary/5 p-4 rounded-full border border-primary/20">
+              <Moon className="h-12 w-12 text-primary" />
+            </div>
+          </div>
+
+          <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            DreamLens
+          </h1>
+          <p className="text-muted-foreground max-w-md mx-auto text-base leading-relaxed">
+            Unlock the meaning of your dreams through AI-powered analysis across 7 psychological frameworks
+          </p>
+        </div>
       </div>
 
       <div className="container mx-auto max-w-2xl px-4 py-6 space-y-6">
@@ -89,8 +108,16 @@ export default function HomePage() {
                 ))}
               </div>
             ) : recentDreams.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="mb-4">No dreams recorded yet</p>
+              <div className="text-center py-8">
+                <div className="flex justify-center mb-4">
+                  <div className="bg-muted/50 p-3 rounded-full">
+                    <Lightbulb className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                </div>
+                <p className="text-muted-foreground mb-2">No dreams recorded yet</p>
+                <p className="text-xs text-muted-foreground/70 mb-4 max-w-xs mx-auto">
+                  Tip: Keep your phone nearby when you sleep to capture dreams quickly
+                </p>
                 <Button asChild>
                   <Link href="/capture">
                     <Mic className="h-4 w-4 mr-2" />

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Mic, BookOpen, Settings, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageTransition } from '@/components/PageTransition';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -22,7 +23,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Main content */}
-      <main className="flex-1 pb-20">{children}</main>
+      <main id="main-content" className="flex-1 pb-20">
+        <PageTransition>{children}</PageTransition>
+      </main>
 
       {/* Bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

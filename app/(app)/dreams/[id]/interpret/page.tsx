@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, Sparkles, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { Skeleton, SkeletonCard, SkeletonInterpretation } from '@/components/ui/Skeleton';
 import { FrameworkSelector } from '@/components/interpret/FrameworkSelector';
 import { ModelSelector } from '@/components/interpret/ModelSelector';
 import { InterpretationPanel } from '@/components/interpret/InterpretationPanel';
@@ -78,11 +80,42 @@ export default function InterpretPage({ params }: InterpretPageProps) {
 
   if (isDreamLoading) {
     return (
-      <div className="container mx-auto max-w-2xl px-4 py-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/4" />
-          <div className="h-40 bg-muted rounded" />
+      <div className="container mx-auto max-w-2xl px-4 py-6 space-y-6">
+        {/* Breadcrumb skeleton */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton variant="text" className="w-16" />
+          <Skeleton variant="text" className="w-24" />
+          <Skeleton variant="text" className="w-16" />
         </div>
+
+        {/* Header skeleton */}
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded-md" />
+          <div className="flex-1 space-y-2">
+            <Skeleton variant="text" className="w-32 h-6" />
+            <Skeleton variant="text" className="w-48 h-3" />
+          </div>
+        </div>
+
+        {/* Dream preview skeleton */}
+        <SkeletonCard />
+
+        {/* Framework selector skeleton */}
+        <div className="space-y-3">
+          <Skeleton variant="text" className="w-32 h-4" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-24 rounded-full" />
+            <Skeleton className="h-10 w-20 rounded-full" />
+            <Skeleton className="h-10 w-28 rounded-full" />
+          </div>
+        </div>
+
+        {/* Button skeleton */}
+        <Skeleton className="h-12 w-full rounded-md" />
+
+        {/* Interpretation skeleton */}
+        <SkeletonInterpretation />
       </div>
     );
   }
@@ -100,16 +133,25 @@ export default function InterpretPage({ params }: InterpretPageProps) {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-6 space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Dreams', href: '/dreams' },
+          { label: dream.title || 'Untitled Dream', href: `/dreams/${id}` },
+          { label: 'Interpret' },
+        ]}
+      />
+
       {/* Header */}
       <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href={`/dreams/${id}`}>
+        <Button variant="ghost" size="icon" asChild className="shrink-0">
+          <Link href={`/dreams/${id}`} aria-label="Back to dream">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold">Interpret Dream</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground truncate">
             {dream.title || 'Untitled Dream'}
           </p>
         </div>
