@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { BookOpen, ChevronRight, Mic } from 'lucide-react';
+import { BookOpen, ChevronRight, Mic, Moon, Sparkles, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { SkeletonDreamCard } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useDreams } from '@/lib/hooks/useDreams';
 
 export default function DreamsPage() {
@@ -14,11 +16,13 @@ export default function DreamsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-24 bg-muted rounded" />
-          <div className="h-24 bg-muted rounded" />
-          <div className="h-24 bg-muted rounded" />
+        <header className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Dream Journal</h1>
+        </header>
+        <div className="space-y-3">
+          <SkeletonDreamCard />
+          <SkeletonDreamCard />
+          <SkeletonDreamCard />
         </div>
       </div>
     );
@@ -31,19 +35,35 @@ export default function DreamsPage() {
           <h1 className="text-2xl font-bold">Dream Journal</h1>
         </header>
 
-        <Card className="text-center py-12">
-          <CardContent>
-            <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-lg font-semibold mb-2">No dreams yet</h2>
-            <p className="text-muted-foreground mb-6">
-              Start by recording your first dream
-            </p>
-            <Button asChild>
-              <Link href="/capture">
-                <Mic className="h-4 w-4 mr-2" />
-                Record Dream
-              </Link>
-            </Button>
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={BookOpen}
+              title="Your dream journal awaits"
+              description="Start capturing your dreams to unlock insights through AI-powered interpretation."
+              tips={[
+                {
+                  icon: Moon,
+                  text: 'Record dreams immediately after waking for best recall',
+                },
+                {
+                  icon: Clock,
+                  text: 'Use Night Mode for half-awake recording (Settings)',
+                },
+                {
+                  icon: Sparkles,
+                  text: 'Get interpretations from 7 psychological frameworks',
+                },
+              ]}
+              action={
+                <Button asChild size="lg">
+                  <Link href="/capture">
+                    <Mic className="h-4 w-4 mr-2" />
+                    Record Your First Dream
+                  </Link>
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       </div>

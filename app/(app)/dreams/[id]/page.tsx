@@ -19,6 +19,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
 import { QuickTagSelector } from '@/components/capture/QuickTagSelector';
 import { useDream } from '@/lib/hooks/useDreams';
 import { getInterpretationsForDream } from '@/lib/db/local';
@@ -44,15 +47,30 @@ export default function DreamPage({ params }: DreamPageProps) {
   const [editContent, setEditContent] = useState('');
   const [editTags, setEditTags] = useState<Tag[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-2xl px-4 py-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/4" />
-          <div className="h-40 bg-muted rounded" />
-          <div className="h-20 bg-muted rounded" />
+      <div className="container mx-auto max-w-2xl px-4 py-6 space-y-6">
+        {/* Breadcrumb skeleton */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton variant="text" className="w-16" />
+          <Skeleton variant="text" className="w-24" />
         </div>
+
+        {/* Header skeleton */}
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded-md" />
+          <div className="flex-1 space-y-2">
+            <Skeleton variant="text" className="w-48 h-6" />
+            <Skeleton variant="text" className="w-32 h-3" />
+          </div>
+        </div>
+
+        {/* Content skeleton */}
+        <SkeletonCard />
+        <SkeletonCard />
       </div>
     );
   }
@@ -88,24 +106,34 @@ export default function DreamPage({ params }: DreamPageProps) {
     setIsEditing(false);
   };
 
-  const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this dream? This cannot be undone.')) {
-      setIsDeleting(true);
-      await remove();
-      router.push('/dreams');
-    }
+  const handleDelete = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    await remove();
+    router.push('/dreams');
   };
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-6 space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Dreams', href: '/dreams' },
+          { label: dream.title || 'Untitled Dream' },
+        ]}
+      />
+
       {/* Header */}
       <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dreams">
+        <Button variant="ghost" size="icon" asChild className="shrink-0">
+          <Link href="/dreams" aria-label="Back to dreams">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {isEditing ? (
             <Input
               value={editTitle}
@@ -114,7 +142,7 @@ export default function DreamPage({ params }: DreamPageProps) {
               className="text-xl font-bold"
             />
           ) : (
-            <h1 className="text-xl font-bold">
+            <h1 className="text-xl font-bold truncate">
               {dream.title || 'Untitled Dream'}
             </h1>
           )}
@@ -254,6 +282,19 @@ export default function DreamPage({ params }: DreamPageProps) {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete dream?"
+        description="This will permanently delete this dream and all its interpretations. This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

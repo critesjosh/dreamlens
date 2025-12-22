@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useCaptureStore } from '@/stores/captureStore';
 import { useDreams } from '@/lib/hooks/useDreams';
 
@@ -27,6 +28,7 @@ export default function CapturePage() {
   } = useCaptureStore();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const handleSave = async () => {
     if (!content.trim()) return;
@@ -51,12 +53,15 @@ export default function CapturePage() {
 
   const handleDiscard = () => {
     if (content || tags.length > 0) {
-      if (confirm('Are you sure you want to discard this dream?')) {
-        reset();
-      }
+      setShowDiscardDialog(true);
     } else {
       reset();
     }
+  };
+
+  const confirmDiscard = () => {
+    reset();
+    setShowDiscardDialog(false);
   };
 
   const canSave = content.trim().length > 0;
@@ -130,6 +135,18 @@ export default function CapturePage() {
           {isSaving ? 'Saving...' : 'Save Dream'}
         </Button>
       </div>
+
+      {/* Discard Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDiscardDialog}
+        onOpenChange={setShowDiscardDialog}
+        title="Discard dream?"
+        description="You have unsaved content. Are you sure you want to discard this dream? This action cannot be undone."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        variant="destructive"
+        onConfirm={confirmDiscard}
+      />
     </div>
   );
 }
