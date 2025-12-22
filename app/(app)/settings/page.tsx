@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Moon, Sun, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun, Sparkles, Github } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -222,6 +222,15 @@ export default function SettingsPage() {
             your dreams through multiple psychological frameworks.
           </p>
           <p>Version: 0.1.0 (MVP)</p>
+          <a
+            href="https://github.com/critesjosh/dreamlens"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-primary hover:underline w-fit"
+          >
+            <Github className="h-4 w-4" />
+            View source on GitHub
+          </a>
         </CardContent>
       </Card>
     </div>
