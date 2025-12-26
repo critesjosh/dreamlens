@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Moon, Sun, Sparkles, Github } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -28,6 +28,11 @@ export default function SettingsPage() {
 
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(openaiApiKey || '');
+
+  // Sync local state with store when it changes (e.g., after hydration from localStorage)
+  useEffect(() => {
+    setApiKeyInput(openaiApiKey || '');
+  }, [openaiApiKey]);
 
   const handleSaveApiKey = () => {
     setOpenAIApiKey(apiKeyInput);
