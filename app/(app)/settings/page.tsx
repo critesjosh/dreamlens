@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Moon, Sun, Sparkles, Github } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun, Sparkles, Github, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -36,6 +36,11 @@ export default function SettingsPage() {
 
   const handleSaveApiKey = () => {
     setOpenAIApiKey(apiKeyInput);
+  };
+
+  const handleClearApiKey = () => {
+    setApiKeyInput('');
+    setOpenAIApiKey('');
   };
 
   const themeOptions = [
@@ -96,6 +101,11 @@ export default function SettingsPage() {
               </button>
             </div>
             <Button onClick={handleSaveApiKey}>Save</Button>
+            {openaiApiKey && (
+              <Button variant="outline" onClick={handleClearApiKey} title="Clear API key">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           {openaiApiKey && (
             <p className="text-xs text-muted-foreground">
