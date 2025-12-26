@@ -2,20 +2,24 @@
 
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Mic, BookOpen, Sparkles, ChevronRight, Moon, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useDreams } from '@/lib/hooks/useDreams';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { localDb } from '@/lib/db/local';
 import { FRAMEWORKS } from '@/types';
 
 export default function HomePage() {
   const { dreams, isLoading } = useDreams();
   const { theme } = useSettingsStore();
+  const interpretationCount = useLiveQuery(() => localDb.interpretations.count(), []);
 
   const recentDreams = dreams.slice(0, 3);
   const totalDreams = dreams.length;
+  const totalInterpretations = interpretationCount ?? 0;
 
   return (
     <div className="min-h-screen pb-20">
@@ -81,8 +85,10 @@ export default function HomePage() {
               </div>
               <div className="border-l border-border" />
               <div>
-                <p className="text-3xl font-bold">7</p>
-                <p className="text-xs text-muted-foreground">Frameworks</p>
+                <p className="text-3xl font-bold">{totalInterpretations}</p>
+                <p className="text-xs text-muted-foreground">
+                  Interpretation{totalInterpretations !== 1 ? 's' : ''}
+                </p>
               </div>
             </div>
           </CardContent>
